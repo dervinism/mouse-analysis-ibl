@@ -47,7 +47,7 @@ for imouse = 1:3
   mouse_name = mstr{imouse};
 
   % data container for infra-slow dynamics analysis
-  infraslowData.(mouse_name).spikes = struct();
+  infraslowData.(mouse_name).spikeCounts = struct();
 
   % load spikes
   load(fullfile(ephysroot, sprintf('spks/spks%s_Feb18.mat',mouse_name)));
@@ -71,7 +71,7 @@ for imouse = 1:3
   Wh = [];
   iprobe=[];
   brainLoc=[];
-  srate = 30; % sampling rate in Hz (how much to bin matrix)
+  srate = 60; % sampling rate in Hz (how much to bin matrix)
   % loop over probes
   for k = 1:numel(spks)
     clu = spks(k).clu; % cluster ids
@@ -105,11 +105,11 @@ for imouse = 1:3
       loc(whp >= lowerBorder(j) & whp < upperBorder(j)) = whichArea;
 
       % Store spiking data for infraslow dynamics analysis
-      if isfield(infraslowData.(mouse_name).spikes, acronym{j})
-        infraslowData.(mouse_name).spikes.(acronym{j}) = ...
-          concatenateMat(infraslowData.(mouse_name).spikes.(acronym{j}), S);
+      if isfield(infraslowData.(mouse_name).spikeCounts, acronym{j})
+        infraslowData.(mouse_name).spikeCounts.(acronym{j}) = ...
+          concatenateMat(infraslowData.(mouse_name).spikeCounts.(acronym{j}), S);
       else
-        infraslowData.(mouse_name).spikes.(acronym{j}) = S;
+        infraslowData.(mouse_name).spikeCounts.(acronym{j}) = S;
       end
     end
 
@@ -136,16 +136,26 @@ for imouse = 1:3
   brainLocAll=[brainLocAll;brainLoc];
 
   % Update infraslow analysis data container
-  areas = fieldnames(infraslowData.(mouse_name).spikes);
+  areas = fieldnames(infraslowData.(mouse_name).spikeCounts);
   for iArea = 1:numel(areas)
-    infraslowData.(mouse_name).spikes.(areas{iArea}) = ...
-      infraslowData.(mouse_name).spikes.(areas{iArea})(:, ...
-      min([size(infraslowData.(mouse_name).spikes.(areas{iArea}),2) ispont(1)]): ...
-      min([size(infraslowData.(mouse_name).spikes.(areas{iArea}),2) ispont(end)]));
+    areaName = areas{iArea};
+    infraslowData.(mouse_name).spikeCounts.(areaName) = ...
+      infraslowData.(mouse_name).spikeCounts.(areaName)(:, ...
+      min([size(infraslowData.(mouse_name).spikeCounts.(areaName),2) ispont(1)]): ...
+      min([size(infraslowData.(mouse_name).spikeCounts.(areaName),2) ispont(end)]));
   end
   infraslowData.(mouse_name).motionSVD = x;
   infraslowData.(mouse_name).times = tspont;
   infraslowData.(mouse_name).samplingRate = srate;
+
+  % Convert spike counts to spike times
+  areas = fieldnames(infraslowData.(mouse_name).spikeCounts);
+  for iArea = 1:numel(areas)
+    areaName = areas{iArea};
+    infraslowData.(mouse_name).spikeTimes.(areaName) = ...
+      hist2data(infraslowData.(mouse_name).spikeCounts.(areaName), ...
+      infraslowData.(mouse_name).times);
+  end
 end
 
 % Save data for infraslow analysis
