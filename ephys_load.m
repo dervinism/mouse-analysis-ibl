@@ -72,6 +72,7 @@ for imouse = 1:3
   iprobe=[];
   brainLoc=[];
   srate = 60; % sampling rate in Hz (how much to bin matrix)
+  unitEndID = 0;
   % loop over probes
   for k = 1:numel(spks)
     clu = spks(k).clu; % cluster ids
@@ -99,24 +100,38 @@ for imouse = 1:3
     upperBorder = probeLocations(imouse).probe(k).borders.upperBorder;
     acronym     = probeLocations(imouse).probe(k).borders.acronym;
     loc = zeros(numel(whp),1);
+    probeID = k * ones(size(S,1),1);
+    unitStartID = unitEndID + 1;
+    unitEndID = unitEndID + size(S,1);
+    unitID = (unitStartID:unitEndID)';
     % determine brain area for each cluster based on whp
     for j = 1:numel(acronym)
       whichArea = find(strcmp(areaLabels, acronym{j}));
-      loc(whp >= lowerBorder(j) & whp < upperBorder(j)) = whichArea;
+      areaInds = whp >= lowerBorder(j) & whp < upperBorder(j);
+      loc(areaInds) = whichArea;
 
       % Store spiking data for infraslow dynamics analysis
       if isfield(infraslowData.(mouse_name).spikeCounts, acronym{j})
         infraslowData.(mouse_name).spikeCounts.(acronym{j}) = ...
-          concatenateMat(infraslowData.(mouse_name).spikeCounts.(acronym{j}), S);
+          concatenateMat(infraslowData.(mouse_name).spikeCounts.(acronym{j}), S(areaInds,:));
+        infraslowData.(mouse_name).spikeProbeIDs.(acronym{j}) = ...
+          concatenateMat(infraslowData.(mouse_name).spikeProbeIDs.(acronym{j}), probeID(areaInds));
+        infraslowData.(mouse_name).verticalCoords.(acronym{j}) = ...
+          concatenateMat(infraslowData.(mouse_name).verticalCoords.(acronym{j}), whp(areaInds));
+        infraslowData.(mouse_name).unitIDs.(acronym{j}) = ...
+          concatenateMat(infraslowData.(mouse_name).unitIDs.(acronym{j}), unitID(areaInds));
       else
-        infraslowData.(mouse_name).spikeCounts.(acronym{j}) = S;
+        infraslowData.(mouse_name).spikeCounts.(acronym{j}) = S(areaInds,:);
+        infraslowData.(mouse_name).spikeProbeIDs.(acronym{j}) = probeID(areaInds);
+        infraslowData.(mouse_name).verticalCoords.(acronym{j}) = whp(areaInds);
+        infraslowData.(mouse_name).unitIDs.(acronym{j}) = unitID(areaInds);
       end
     end
 
     % concatenate for all probes
     Wh = [Wh; whp]; %#ok<*AGROW>
     brainLoc = [brainLoc; loc];
-    iprobe=[iprobe; k * ones(size(S,1),1)];
+    iprobe=[iprobe; probeID];
   end
   %%
   stall = stall(1:ij, 1:maxt);
@@ -159,4 +174,6 @@ for imouse = 1:3
 end
 
 % Save data for infraslow analysis
-save('eightprobesPreprocessedData.mat', 'infraslowData', '-v7.3');
+params
+preprocessedDataFile = fullfile(processedDataFolder, 'eightprobesPreprocessedData.mat');
+save(preprocessedDataFile, 'infraslowData', '-v7.3');

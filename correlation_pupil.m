@@ -13,22 +13,22 @@ for iAnimal = 1:numel(animalNames)
   animalName = animalNames{iAnimal};
   pupilArea = infraslowData.(animalName).pupilArea;
   times = infraslowData.(animalName).times;
-  effectiveSR = mean(diff(times));
+  effectiveSR = round(1/mean(diff(times)));
   brainAreas = fieldnames(infraslowData.(animalName).spikeCounts);
   for iArea = 1:numel(brainAreas)
     areaName = brainAreas{iArea};
     brainAreaSpikes = infraslowData.(animalName).spikeCounts.(areaName);
     [brainAreaSpikes, downsampledTimes] = resampleSpikeCounts( ...
-      brainAreaSpikes, stepsize=effectiveSR, ...
+      brainAreaSpikes, stepsize=1/effectiveSR, ...
       newStepsize=1/downsampledRate); % Downsample spiking data
     downsampledPupilArea = interp1(times, pupilArea, downsampledTimes, ...
       'linear', 'extrap'); % Downsample pupil area
     [spikingPupilCorr.(animalName).(areaName).rPearson, ...
       spikingPupilCorr.(animalName).(areaName).pvalPearson] = ...
-      corrMulti(downsampledPupilArea, brainAreaSpikes', 'Pearson');
+      corrMulti(downsampledPupilArea, brainAreaSpikes, 'Pearson');
     [spikingPupilCorr.(animalName).(areaName).rSpearman, ...
       spikingPupilCorr.(animalName).(areaName).pvalSpearman] = ...
-      corrMulti(downsampledPupilArea, brainAreaSpikes', 'Spearman');
+      corrMulti(downsampledPupilArea, brainAreaSpikes, 'Spearman');
     spikingPupilCorr.(animalName).(areaName).timeOfCompletion = datetime;
   end
   
