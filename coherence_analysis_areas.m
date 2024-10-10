@@ -32,6 +32,7 @@ load(analysisResultsFile);
 
 % Carry out coherence analysis of individual units wrt population rates of different brain areas
 warning('off', 'all');
+parfevalOnAll(@warning,0,'off','all');
 animalNames = fieldnames(infraslowData);
 for iAnimal = 1:numel(animalNames)
   animalName = animalNames{iAnimal};
@@ -52,7 +53,7 @@ for iAnimal = 1:numel(animalNames)
     end
     for iRefArea = 1:numel(brainAreas)
       refAreaName = brainAreas{iRefArea};
-      disp(['Comparing units in the brain area ' areaName ...
+      disp(['Comparing units in ' animalName ' brain area ' areaName ...
         ' to the population rate in the area ' refAreaName '.']);
       refBrainAreaSpikeTimes = infraslowData.(animalName).spikeTimes.(refAreaName);
       if strcmpi(population, 'Full')
@@ -97,4 +98,5 @@ end
 containerName = ['spikingSpikingCoh' population];
 infraslowAnalyses.(containerName) = spikingSpikingCoh;
 save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
+parfevalOnAll(@warning,0,'on','all');
 warning('on', 'all');

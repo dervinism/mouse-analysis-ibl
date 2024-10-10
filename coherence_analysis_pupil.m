@@ -9,6 +9,7 @@ load(preprocessedDataFile);
 
 % Carry out coherence analysis of individual units wrt the pupil area
 warning('off', 'all');
+parfevalOnAll(@warning,0,'off','all');
 animalNames = fieldnames(infraslowData);
 for iAnimal = 1:numel(animalNames)
   animalName = animalNames{iAnimal};
@@ -18,7 +19,7 @@ for iAnimal = 1:numel(animalNames)
   brainAreas = fieldnames(infraslowData.(animalName).spikeCounts);
   for iArea = 1:numel(brainAreas)
     areaName = brainAreas{iArea};
-    disp(['Comparing units in the brain area ' areaName ' to the pupil area.']);
+    disp(['Comparing units in ' animalName ' brain area ' areaName ' to the pupil area.']);
     brainAreaSpikeCounts = infraslowData.(animalName).spikeCounts.(areaName);
     brainAreaSpikeTimes = infraslowData.(animalName).spikeTimes.(areaName);
     [spikingPupilCoh.(animalName).(areaName).fullCoherence, ...
@@ -43,4 +44,5 @@ if exist(analysisResultsFile, 'file')
 end
 infraslowAnalyses.spikingPupilCoh = spikingPupilCoh;
 save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
+parfevalOnAll(@warning,0,'on','all');
 warning('on', 'all');
