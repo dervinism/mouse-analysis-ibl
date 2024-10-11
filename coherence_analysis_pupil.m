@@ -7,6 +7,12 @@ params
 preprocessedDataFile = fullfile(processedDataFolder, 'eightprobesPreprocessedData.mat');
 load(preprocessedDataFile);
 
+% Load data analysis results
+analysisResultsFile = fullfile(processedDataFolder, 'eightprobesAnalysisResults.mat');
+if exist(analysisResultsFile, 'file')
+  load(analysisResultsFile);
+end
+
 % Carry out coherence analysis of individual units wrt the pupil area
 warning('off', 'all');
 parfevalOnAll(@warning,0,'off','all');
@@ -19,7 +25,10 @@ for iAnimal = 1:numel(animalNames)
   brainAreas = fieldnames(infraslowData.(animalName).spikeCounts);
   for iArea = 1:numel(brainAreas)
     areaName = brainAreas{iArea};
-    disp(['Comparing units in ' animalName ' brain area ' areaName ' to the pupil area.']);
+    progressIndicator = [num2str(iAnimal) '.' num2str(iArea) '/' ...
+        num2str(numel(animalNames)) '.' num2str(numel(brainAreas))];
+    disp([progressIndicator ' Comparing units in ' animalName ' brain area ' ...
+      areaName ' to the pupil area.']);
     brainAreaSpikeCounts = infraslowData.(animalName).spikeCounts.(areaName);
     brainAreaSpikeTimes = infraslowData.(animalName).spikeTimes.(areaName);
     [spikingPupilCoh.(animalName).(areaName).fullCoherence, ...
@@ -35,14 +44,11 @@ for iAnimal = 1:numel(animalNames)
       parallelise=true);
     spikingPupilCoh.(animalName).(areaName).timeOfCompletion = datetime;
   end
+
+  % Save data analysis results
+  infraslowAnalyses.spikingPupilCoh = spikingPupilCoh;
+  save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
 end
 
-% Save data analysis results
-analysisResultsFile = fullfile(processedDataFolder, 'eightprobesAnalysisResults.mat');
-if exist(analysisResultsFile, 'file')
-  load(analysisResultsFile);
-end
-infraslowAnalyses.spikingPupilCoh = spikingPupilCoh;
-save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
 parfevalOnAll(@warning,0,'on','all');
 warning('on', 'all');
