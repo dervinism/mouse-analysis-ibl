@@ -1,26 +1,9 @@
 % Coherence analysis script comparing unit spiking activity with respect to the population rates of different brain areas
 
-areaLabels = {'FrCtx', ...    % Frontal cortex?
-              'FrMoCtx', ...  % Frontal motor cortex (premotor, supplementary motor?)
-              'SomMoCtx', ... % Somatomotor cortex: Primary motor and the somatosensory cortices
-              'SSCtx', ...    % Somatosensory cortex (or secondory somatosensory cortex?)
-              'V1', ...
-              'V2', ...
-              'RSP', ...      % Retrosplenial cortex
-              'CP', ...       % Caudoputamen
-              'LS', ...       % Lateral septum
-              'LH', ...       % Lateral habenula
-              'HPF', ...      % Hippocampal formation
-              'TH', ...       % Thalamus
-              'SC', ...       % Superior colliculus
-              'MB'};          % Midbrain
-
-% Look into these brain areas:
-% HPF -> RSP -> (FrCtx -> FrMoCtx) -> (SomMoCtx -> SSCtx) -> (V2 -> V1) -> TH
-
 % Load parameters
 params
 population = 'Full'; % 'Full', 'Positive', or 'Negative'
+parallelCores = 8;
 
 % Load preprocessed data
 preprocessedDataFile = fullfile(processedDataFolder, 'eightprobesPreprocessedData.mat');
@@ -30,11 +13,23 @@ load(preprocessedDataFile);
 analysisResultsFile = fullfile(processedDataFolder, 'eightprobesAnalysisResults.mat');
 load(analysisResultsFile);
 
+% Set up parallelisation
+warning('off', 'all');
+if parallelCores > 1
+  parallelise = true;
+  p = gcp('nocreate');
+  if isempty(p)
+    parpool(parallelCores);
+  end
+  parfevalOnAll(@warning,0,'off','all');
+else
+  parallelise = false;
+end
+
 % Carry out coherence analysis of individual units wrt population rates of different brain areas
 warning('off', 'all');
-parfevalOnAll(@warning,0,'off','all');
 animalNames = fieldnames(infraslowData);
-for iAnimal = 1:numel(animalNames)
+for iAnimal = 2:numel(animalNames) %1:numel(animalNames)
   animalName = animalNames{iAnimal};
   times = infraslowData.(animalName).times;
   effectiveSR = round(1/mean(diff(times)));
@@ -68,27 +63,54 @@ for iAnimal = 1:numel(animalNames)
       if strcmpi(areaName, refAreaName)
         spikeProbeIDs = infraslowData.(animalName).spikeProbeIDs.(refAreaName);
         verticalCoords = infraslowData.(animalName).verticalCoords.(refAreaName);
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullCoherence = [];
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1Coherence = [];
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2Coherence = [];
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullInterpCoherence = [];
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1InterpCoherence = [];
+        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2InterpCoherence = [];
         for iUnit = 1:numel(brainAreaSpikeTimes)
-          excludeInds = spikeProbeIDs == spikeProbeIDs(iUnit) & ...
-            abs(verticalCoords - verticalCoords(iUnit)) < exclRad;
-          brainAreaPopulationRate(iUnit) = collapseCell( ...
-            refBrainAreaSpikeTimes(~excludeInds(:) & includeReference(:)), sortElements='ascend'); %#ok<*SAGROW>
+          if includeSignal(iUnit)
+            excludeInds = spikeProbeIDs == spikeProbeIDs(iUnit) & ...
+              abs(verticalCoords - verticalCoords(iUnit)) < exclRad;
+            brainAreaPopulationRate = collapseCell(refBrainAreaSpikeTimes( ...
+              ~excludeInds(:) & includeReference(:)), sortElements='ascend'); %#ok<*SAGROW>
+            [fullCoherenceTemp, half1CoherenceTemp, half2CoherenceTemp, ...
+              fullInterpCoherenceTemp, half1InterpCoherenceTemp, half2InterpCoherenceTemp] = ...
+              coherence(brainAreaSpikeTimes(iUnit), brainAreaPopulationRate, ...
+              stepsize=1/effectiveSR, startTime=times(1), freqGrid=FOI, ...
+              typespk1='pb', typespk2='pb', winfactor=winfactor, ...
+              freqfactor=freqfactor, tapers=tapers, halfCoherence=true, ...
+              parallelise=false);
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullCoherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullCoherence; fullCoherenceTemp];
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1Coherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1Coherence; half1CoherenceTemp];
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2Coherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2Coherence; half2CoherenceTemp];
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullInterpCoherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullInterpCoherence; fullInterpCoherenceTemp];
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1InterpCoherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1InterpCoherence; half1InterpCoherenceTemp];
+            spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2InterpCoherence = ...
+              [spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2InterpCoherence; half2InterpCoherenceTemp];
+          end
         end
       else
         brainAreaPopulationRate = collapseCell( ...
           refBrainAreaSpikeTimes(includeReference), sortElements='ascend');
+        [spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullCoherence, ...
+          spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1Coherence, ...
+          spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2Coherence, ...
+          spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullInterpCoherence, ...
+          spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1InterpCoherence, ...
+          spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2InterpCoherence] = ...
+          coherence(brainAreaSpikeTimes(includeSignal), brainAreaPopulationRate, ...
+          stepsize=1/effectiveSR, startTime=times(1), freqGrid=FOI, ...
+          typespk1='pb', typespk2='pb', winfactor=winfactor, ...
+          freqfactor=freqfactor, tapers=tapers, halfCoherence=true, ...
+          parallelise=parallelise);
       end
-      [spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullCoherence, ...
-        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1Coherence, ...
-        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2Coherence, ...
-        spikingSpikingCoh.(animalName).(areaName).(refAreaName).fullInterpCoherence, ...
-        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half1InterpCoherence, ...
-        spikingSpikingCoh.(animalName).(areaName).(refAreaName).half2InterpCoherence] = ...
-        coherence(brainAreaSpikeTimes(includeSignal), brainAreaPopulationRate, ...
-        stepsize=1/effectiveSR, startTime=times(1), freqGrid=FOI, ...
-        typespk1='pb', typespk2='pb', winfactor=winfactor, ...
-        freqfactor=freqfactor, tapers=tapers, halfCoherence=true, ...
-        parallelise=true);
       spikingSpikingCoh.(animalName).(areaName).(refAreaName).unitIDs = ...
         infraslowData.(animalName).unitIDs.(areaName)(includeSignal);
       spikingSpikingCoh.(animalName).(areaName).(refAreaName).timeOfCompletion = datetime;
@@ -97,9 +119,12 @@ for iAnimal = 1:numel(animalNames)
   
   % Save data analysis results
   containerName = ['spikingSpikingCoh' population];
-  infraslowAnalyses.(containerName) = spikingSpikingCoh;
+  infraslowAnalyses.(containerName).(animalName) = spikingSpikingCoh.(animalName);
   save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
 end
 
-parfevalOnAll(@warning,0,'on','all');
+% Switch on warnings
+if parallelCores > 1
+  parfevalOnAll(@warning,0,'on','all');
+end
 warning('on', 'all');

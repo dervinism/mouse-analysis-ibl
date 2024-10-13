@@ -20,3 +20,22 @@ FOI = [20 15 10 8 6 5 4 3 2 1 0.7 0.5 0.3 0.2 0.1...
 
 % exclusion radius around a unit when calculating local population firing rate
 exclRad = 60; %um
+
+% Brain area labels
+areaLabels = {'FrCtx', ...    % Frontal cortex?
+              'FrMoCtx', ...  % Frontal motor cortex (premotor, supplementary motor?)
+              'SomMoCtx', ... % Somatomotor cortex: Primary motor and the somatosensory cortices
+              'SSCtx', ...    % Somatosensory cortex (or secondory somatosensory cortex?)
+              'V1', ...
+              'V2', ...
+              'RSP', ...      % Retrosplenial cortex
+              'CP', ...       % Caudoputamen
+              'LS', ...       % Lateral septum
+              'LH', ...       % Lateral habenula
+              'HPF', ...      % Hippocampal formation
+              'TH', ...       % Thalamus
+              'SC', ...       % Superior colliculus
+              'MB'};          % Midbrain
+
+% Look into these brain areas:
+% HPF -> RSP -> (FrCtx -> FrMoCtx) -> (SomMoCtx -> SSCtx) -> (V2 -> V1) -> TH

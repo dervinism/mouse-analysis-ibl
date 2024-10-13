@@ -2,6 +2,7 @@
 
 % Load parameters
 params
+parallelCores = 8;
 
 % Load preprocessed data
 preprocessedDataFile = fullfile(processedDataFolder, 'eightprobesPreprocessedData.mat');
@@ -13,9 +14,21 @@ if exist(analysisResultsFile, 'file')
   load(analysisResultsFile);
 end
 
+% Set up parallelisation
+warning('off', 'all');
+if parallelCores > 1
+  parallelise = true;
+  p = gcp('nocreate');
+  if isempty(p)
+    parpool(parallelCores);
+  end
+  parfevalOnAll(@warning,0,'off','all');
+else
+  parallelise = false;
+end
+
 % Carry out coherence analysis of individual units wrt the pupil area
 warning('off', 'all');
-parfevalOnAll(@warning,0,'off','all');
 animalNames = fieldnames(infraslowData);
 for iAnimal = 1:numel(animalNames)
   animalName = animalNames{iAnimal};
@@ -41,14 +54,17 @@ for iAnimal = 1:numel(animalNames)
       stepsize=1/effectiveSR, startTime=times(1), freqGrid=FOI, ...
       typespk1='pb', typespk2='c', winfactor=winfactor, ...
       freqfactor=freqfactor, tapers=tapers, halfCoherence=true, ...
-      parallelise=true);
+      parallelise=parallelise);
     spikingPupilCoh.(animalName).(areaName).timeOfCompletion = datetime;
   end
 
   % Save data analysis results
-  infraslowAnalyses.spikingPupilCoh = spikingPupilCoh;
+  infraslowAnalyses.spikingPupilCoh.(animalName) = spikingPupilCoh.(animalName);
   save(analysisResultsFile, 'infraslowAnalyses', '-v7.3');
 end
 
-parfevalOnAll(@warning,0,'on','all');
+% Switch on warnings
+if parallelCores > 1
+  parfevalOnAll(@warning,0,'on','all');
+end
 warning('on', 'all');
