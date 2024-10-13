@@ -2,6 +2,7 @@
 
 % IO
 processedDataFolder = 'C:\Users\44079\Work\Leicester\infraslow-dynamics\04_data_analysis\004_ibl_eightprobes';
+figFolder = 'C:\Users\44079\Work\Leicester\infraslow-dynamics\05_figures\004_ibl_eighprobes';
 
 % Pupil correlation parameters
 downsampledRate = 0.2;
