@@ -3,7 +3,7 @@
 % Load parameters
 params
 population = 'Full'; % 'Full', 'Positive', or 'Negative'
-parallelCores = 8;
+parallelCores = 1;
 
 % Load preprocessed data
 preprocessedDataFile = fullfile(processedDataFolder, 'eightprobesPreprocessedData.mat');
