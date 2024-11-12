@@ -40,3 +40,5 @@ areaLabels = {'FrCtx', ...    % Frontal cortex?
 
 % Look into these brain areas:
 % HPF -> RSP -> (FrCtx -> FrMoCtx) -> (SomMoCtx -> SSCtx) -> (V2 -> V1) -> TH
+
+% Refer to: https://connectivity.brain-map.org/3d-viewer?v=1
